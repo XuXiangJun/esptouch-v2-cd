@@ -1,6 +1,7 @@
 package localizable.strings
 
 object StringsEN : Strings {
+    override val localAddressLabel: String = "Local IP"
     override val wifiSSIDLabel: String = "Wi-Fi SSID"
     override val wifiBSSIDLabel: String = "Wi-Fi BSSID"
     override val wifiPasswordLabel: String = "Wi-Fi Password"
@@ -10,6 +11,7 @@ object StringsEN : Strings {
     override val startProvisioning: String = "Start Provisioning"
     override val stopProvisioning: String = "Stop Provisioning"
     override val gettingNetworkInfo: String = "Try getting network information"
+    override val localAddressError: String = "Please input Local IP"
     override val ssidError: String = "Please input valid SSID"
     override val bssidError: String = "Please input valid BSSID"
     override val deviceCountError: String = "Please input valid Device Count"

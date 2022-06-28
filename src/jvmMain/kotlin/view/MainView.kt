@@ -21,6 +21,8 @@ import com.espressif.iot.esptouch2.provision.*
 import kotlinx.coroutines.*
 import localizable.Localizable
 import model.AppState
+import java.net.InetAddress
+import kotlin.math.sin
 
 class MainView(
     private val viewModel: MainViewModel
@@ -72,6 +74,7 @@ class MainView(
     @Composable
     fun configContent() {
         println("configContent")
+        var localIP by remember { viewModel.localAddress }
         var ssid by remember { viewModel.ssid }
         var bssid by remember { viewModel.bssid }
         var password by remember { viewModel.password }
@@ -82,6 +85,21 @@ class MainView(
 
         var startButtonEnabled by remember { mutableStateOf(true) }
         val startClickListener = click@{
+            val localAddress = if (localIP.isNotEmpty()) {
+                try {
+                    InetAddress.getByName(localIP)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    null
+                }
+            } else {
+                null
+            }
+            if (localAddress == null) {
+                hintMessage = strings.localAddressError
+                return@click
+            }
+
             val ssidData = if (ssid.isNotEmpty()) {
                 ssid.toByteArray()
             } else {
@@ -124,7 +142,7 @@ class MainView(
                 if (customData.isNotEmpty()) {
                     setReservedData(customData)
                 }
-                setAddress(viewModel.localAddress.value)
+                setAddress(localAddress)
             }.build()
 
             scope.launch {
@@ -166,6 +184,17 @@ class MainView(
                     )
                         .fillMaxSize()
                 ) {
+                    OutlinedTextField(
+                        value = localIP,
+                        onValueChange = {
+                            localIP = it
+                            hintMessage = ""
+                        },
+                        label = { Text(strings.localAddressLabel) },
+                        singleLine = true,
+                        modifier = Modifier.padding(8.dp).fillMaxWidth(),
+                    )
+
                     OutlinedTextField(
                         value = ssid,
                         onValueChange = {

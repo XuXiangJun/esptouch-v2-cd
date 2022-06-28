@@ -17,7 +17,7 @@ fun main() = application {
         onCloseRequest = ::exitApplication,
         title = "EspTouchV2CD",
         icon = painterResource("esptouch.png"),
-        state = WindowState(width = 800.dp, height = 700.dp)
+        state = WindowState(width = 900.dp, height = 800.dp)
     ) {
         MaterialTheme(colors) {
             App()
