@@ -16,4 +16,5 @@ interface Strings {
     val bssidError: String
     val deviceCountError: String
     val aesKeyError: String
+    val provisioningResultsLabel: String
 }

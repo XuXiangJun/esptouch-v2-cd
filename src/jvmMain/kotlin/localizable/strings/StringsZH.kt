@@ -16,4 +16,5 @@ object StringsZH : Strings {
     override val bssidError: String = "请输入正确的 Wi-Fi BSSID"
     override val deviceCountError: String = "请输入正确的设备数量"
     override val aesKeyError: String = "请输入正确的 AES 键"
+    override val provisioningResultsLabel: String = "配网结果"
 }

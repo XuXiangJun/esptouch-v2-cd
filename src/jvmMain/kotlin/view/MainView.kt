@@ -343,6 +343,12 @@ class MainView(
                         )
                     }
 
+                    Text(
+                        text = strings.provisioningResultsLabel,
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colors.primary
+                    )
+
                     LazyColumn(
                         modifier = Modifier.fillMaxSize()
                             .scrollable(
@@ -412,6 +418,7 @@ class MainView(
 
             override fun onStop() {
                 println("startProvisioning onStop")
+                stopProvisioning()
             }
 
             override fun onError(e: Exception) {
@@ -424,8 +431,10 @@ class MainView(
     }
 
     private fun stopProvisioning() {
-        if (provisioner.isProvisioning) {
+        if (viewModel.provisioningProgress.value){
             viewModel.provisioningProgress.value = false
+        }
+        if (provisioner.isProvisioning) {
             provisioner.stopProvisioning()
         }
     }

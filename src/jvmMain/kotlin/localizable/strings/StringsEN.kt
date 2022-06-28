@@ -16,4 +16,5 @@ object StringsEN : Strings {
     override val bssidError: String = "Please input valid BSSID"
     override val deviceCountError: String = "Please input valid Device Count"
     override val aesKeyError: String = "Please input valid AES Key"
+    override val provisioningResultsLabel: String = "Provisioning Results"
 }
