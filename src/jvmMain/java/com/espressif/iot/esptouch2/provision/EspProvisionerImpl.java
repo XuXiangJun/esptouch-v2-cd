@@ -381,10 +381,4 @@ class EspProvisionerImpl implements IEspProvisioner {
             Log.d(TAG, "Sync Future end");
         }
     }
-
-    @Override
-    protected void finalize() throws Throwable {
-        close();
-        super.finalize();
-    }
 }

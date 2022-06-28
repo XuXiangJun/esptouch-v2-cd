@@ -43,6 +43,7 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "esptouch-v2-cd"
             packageVersion = appVersion
+            licenseFile.set(project.file("ESPRESSIF_MIT_LICENSE"))
 
             val iconsRoot = project.file("src/jvmMain/resources/icons")
             linux {
