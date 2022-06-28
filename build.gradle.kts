@@ -6,8 +6,10 @@ plugins {
     id("org.jetbrains.compose")
 }
 
+val appVersion = "1.0.0"
+
 group = "com.github.xuxiangjun"
-version = "1.0"
+version = appVersion
 
 repositories {
     google()
@@ -40,7 +42,18 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "esptouch-v2-cd"
-            packageVersion = "1.0.0"
+            packageVersion = appVersion
+
+            val iconsRoot = project.file("src/jvmMain/resources/icons")
+            linux {
+                iconFile.set(iconsRoot.resolve("icon-linux.png"))
+            }
+            windows {
+                iconFile.set(iconsRoot.resolve("icon-windows.ico"))
+            }
+            macOS {
+                iconFile.set(iconsRoot.resolve("icon-macos.icns"))
+            }
         }
     }
 }
