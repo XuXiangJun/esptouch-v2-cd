@@ -10,4 +10,9 @@ public class EspProvisioningResult {
         this.address = address;
         this.bssid = bssid;
     }
+
+    @Override
+    public String toString() {
+        return "BSSID=" + bssid + ", Address=" + address.getHostAddress();
+    }
 }

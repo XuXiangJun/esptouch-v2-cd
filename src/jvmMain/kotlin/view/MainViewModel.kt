@@ -1,6 +1,7 @@
 package view
 
 import androidx.compose.runtime.*
+import com.espressif.iot.esptouch2.provision.EspProvisioningResult
 import model.AppState
 
 class MainViewModel {
@@ -17,4 +18,5 @@ class MainViewModel {
     val localAddress = mutableStateOf("")
 
     val provisioningProgress = mutableStateOf(true)
+    val provisioningResults = mutableStateListOf<EspProvisioningResult>()
 }

@@ -3,21 +3,22 @@ package view
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.espressif.iot.esptouch2.provision.EspProvisioningRequest
-import com.espressif.iot.esptouch2.provision.TouchNetUtil
-import kotlinx.coroutines.MainScope
+import com.espressif.iot.esptouch2.provision.*
+import kotlinx.coroutines.*
 import localizable.Localizable
 import model.AppState
 
@@ -30,9 +31,25 @@ class MainView(
 
     private var deviceCount = -1
 
+    private val provisioner = EspProvisioner()
+
+    fun updateNetworkInfo() {
+        scope.launch {
+            val netInfo = withContext(Dispatchers.IO) {
+                TouchNetUtil.getNetInfo()
+            }
+
+            viewModel.bssid.value = netInfo.hardBssid
+            viewModel.localAddress.value = netInfo.localAddress.hostAddress
+            viewModel.state.value = AppState.Config
+        }
+    }
+
     @Composable
     fun getWifiProgressContent() {
-        AnimatedVisibility(viewModel.state.value == AppState.Init) {
+        println("getWifiProgressContent")
+        val visible = viewModel.state.value == AppState.Init
+        AnimatedVisibility(visible) {
             Column(
                 modifier = Modifier.padding(16.dp)
                     .fillMaxSize()
@@ -49,11 +66,12 @@ class MainView(
                         .padding(16.dp)
                 )
             }
-        }
+        } // AnimatedVisibility
     }
 
     @Composable
     fun configContent() {
+        println("configContent")
         var ssid by remember { viewModel.ssid }
         var bssid by remember { viewModel.bssid }
         var password by remember { viewModel.password }
@@ -62,6 +80,7 @@ class MainView(
         var customText by remember { viewModel.customText }
         var hintMessage by remember { viewModel.hintMessage }
 
+        var startButtonEnabled by remember { mutableStateOf(true) }
         val startClickListener = click@{
             val ssidData = if (ssid.isNotEmpty()) {
                 ssid.toByteArray()
@@ -93,7 +112,7 @@ class MainView(
             }
             val customData = customText.toByteArray()
 
-            viewModel.state.value = AppState.Provisioning
+            startButtonEnabled = false
             viewModel.provisioningProgress.value = true
             val request = EspProvisioningRequest.Builder().apply {
                 setSSID(ssidData)
@@ -107,10 +126,26 @@ class MainView(
                 }
                 setAddress(viewModel.localAddress.value)
             }.build()
-//            startProvisioning(request)
+
+            scope.launch {
+                withContext(Dispatchers.IO) {
+                    stopSync()
+                    while (true) {
+                        delay(100)
+                        if (!provisioner.isSyncing) {
+                            break
+                        }
+                    }
+                }
+
+                startButtonEnabled = true
+                viewModel.state.value = AppState.Provisioning
+                startProvisioning(request)
+            }
         }
 
-        AnimatedVisibility(viewModel.state.value == AppState.Config) {
+        val visible = viewModel.state.value == AppState.Config
+        AnimatedVisibility(visible) {
             Box(
                 modifier = Modifier.padding(16.dp)
                     .fillMaxSize()
@@ -119,7 +154,8 @@ class MainView(
                     onClick = startClickListener,
                     modifier = Modifier.fillMaxWidth()
                         .padding(8.dp)
-                        .align(Alignment.BottomCenter)
+                        .align(Alignment.BottomCenter),
+                    enabled = startButtonEnabled
                 ) {
                     Text(strings.startProvisioning)
                 }
@@ -209,22 +245,29 @@ class MainView(
 
 
         } // AnimatedVisibility
+
+        if (visible && !provisioner.isSyncing) {
+            startSync()
+        }
     }
 
     @Composable
     fun provisioningContent() {
-        var showProgress by remember { viewModel.provisioningProgress }
+        println("provisioningContent")
+        val showProgress by remember { viewModel.provisioningProgress }
+        var backEnable by remember { mutableStateOf(true) }
+        val results = viewModel.provisioningResults
+        results.clear()
 
-        AnimatedVisibility(
-            visible = viewModel.state.value == AppState.Provisioning,
-        ) {
+        val visible = viewModel.state.value == AppState.Provisioning
+        AnimatedVisibility(visible) {
             Box(
                 modifier = Modifier.padding(16.dp)
                     .fillMaxSize()
             ) {
                 Button(
                     onClick = {
-                        showProgress = false
+                        stopProvisioning()
                     },
                     modifier = Modifier.fillMaxWidth()
                         .padding(8.dp)
@@ -244,9 +287,19 @@ class MainView(
                         contentDescription = "",
                         modifier = Modifier.size(48.dp)
                             .padding(8.dp)
-                            .clickable {
-                                viewModel.state.value = AppState.Config
-                                println("Prov set config")
+                            .clickable(enabled = backEnable) {
+                                backEnable = false
+                                scope.launch {
+                                    withContext(Dispatchers.IO) {
+                                        stopProvisioning()
+                                        while (provisioner.isProvisioning) {
+                                            delay(100)
+                                        }
+                                    }
+
+                                    backEnable = true
+                                    viewModel.state.value = AppState.Config
+                                }
                             }
                     )
 
@@ -260,8 +313,91 @@ class MainView(
                                 .padding(16.dp)
                         )
                     }
+
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize()
+                            .scrollable(
+                                rememberScrollState(),
+                                Orientation.Vertical
+                            ),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(results) { result ->
+                            Text(result.toString())
+                        }
+                    }
                 } // Column
             } // Box
         } // AnimatedVisibility
+    }
+
+    private fun startSync() {
+        println("StartSync")
+        provisioner.startSync(object: EspSyncListener {
+            override fun onStart() {
+                println("StartSync onStart")
+            }
+
+            override fun onStop() {
+                println("StartSync onStop")
+            }
+
+            override fun onError(e: Exception) {
+                println("StartSync onError")
+                e.printStackTrace()
+                provisioner.stopSync()
+            }
+
+        })
+    }
+
+    private fun stopSync() {
+        println("stopSync")
+        if (provisioner.isSyncing) {
+            provisioner.stopSync()
+        }
+    }
+
+    private fun startProvisioning(request: EspProvisioningRequest) {
+        println("startProvisioning")
+        val deviceCount = try {
+            viewModel.deviceCount.value.let {
+                if (it.isNotEmpty()) it.toInt() else -1
+            }
+        } catch (e: Exception) {
+            -1
+        }
+        val results = viewModel.provisioningResults
+        provisioner.startProvisioning(request, object : EspProvisioningListener{
+            override fun onStart() {
+                println("startProvisioning onStart")
+            }
+
+            override fun onResponse(result: EspProvisioningResult) {
+                println("startProvisioning onResponse: $result")
+                results.add(result)
+                if (deviceCount > 0 && results.size >= deviceCount) {
+                    stopProvisioning()
+                }
+            }
+
+            override fun onStop() {
+                println("startProvisioning onStop")
+            }
+
+            override fun onError(e: Exception) {
+                println("startProvisioning onError")
+                e.printStackTrace()
+                provisioner.stopProvisioning()
+            }
+
+        })
+    }
+
+    private fun stopProvisioning() {
+        if (provisioner.isProvisioning) {
+            viewModel.provisioningProgress.value = false
+            provisioner.stopProvisioning()
+        }
     }
 }
