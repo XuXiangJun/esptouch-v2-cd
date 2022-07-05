@@ -46,7 +46,7 @@ compose.desktop {
             packageVersion = appVersion
             licenseFile.set(project.file("ESPRESSIF_MIT_LICENSE"))
 
-            val iconsRoot = project.file("src/jvmMain/resources/icons")
+            val iconsRoot = project.file("icons")
             linux {
                 iconFile.set(iconsRoot.resolve("icon-linux.png"))
             }
