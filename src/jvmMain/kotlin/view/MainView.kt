@@ -22,7 +22,6 @@ import kotlinx.coroutines.*
 import localizable.Localizable
 import model.AppState
 import java.net.InetAddress
-import kotlin.math.sin
 
 class MainView(
     private val viewModel: MainViewModel
